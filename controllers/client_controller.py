@@ -16,10 +16,10 @@ def get_all_clients():
 def get_client_logo(client_id):
     try:
         # Get dynamic path to images directory
-        # Go up from skills-python to Project directory, then to skill-nodejs/src/images
+        # Go up from controllers to skills-python directory, then to images
         current_dir = os.path.dirname(os.path.abspath(__file__))
-        project_root = os.path.dirname(os.path.dirname(current_dir))  # Go up 2 levels from controllers
-        images_dir = os.path.join(project_root, 'skill-nodejs', 'src', 'images')
+        project_root = os.path.dirname(current_dir)  # Go up 1 level from controllers to skills-python
+        images_dir = os.path.join(project_root, 'images')
         
         # Image filename
         image_filename = f"{client_id}.jpg"
