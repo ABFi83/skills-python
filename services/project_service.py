@@ -188,14 +188,43 @@ class ProjectService:
     def delete_project(self, project_id):
         """Delete project by ID"""
         try:
+            print(f"Attempting to delete project with ID: {project_id}")
             project = Project.query.filter_by(id=project_id).first()
-            if project:
-                db.session.delete(project)
-                db.session.commit()
+            if not project:
+                print(f"Project with ID {project_id} not found")
+                raise Exception("Project not found")
+            
+            print(f"Found project: {project.name}, proceeding with deletion")
+            
+            # Delete related records first to avoid foreign key constraint issues
+            from models.userproject import UserProject
+            from models.evaluation import Evaluation
+            from models.values import Values
+            
+            # Delete all values related to evaluations of this project
+            evaluations = Evaluation.query.filter_by(project_id=project_id).all()
+            for evaluation in evaluations:
+                Values.query.filter_by(evaluation_id=evaluation.id).delete()
+            
+            # Delete all evaluations for this project
+            Evaluation.query.filter_by(project_id=project_id).delete()
+            
+            # Delete all user-project relationships
+            UserProject.query.filter_by(project_id=project_id).delete()
+            
+            # Now delete the project itself
+            db.session.delete(project)
+            db.session.commit()
+            
+            print(f"Project {project_id} deleted successfully")
+            return {"message": "Project deleted successfully", "id": project_id}
         except Exception as e:
             db.session.rollback()
-            print(f"Error deleting project: {e}")
-            raise Exception("Could not delete project")
+            print(f"Error deleting project: {str(e)}")
+            print(f"Exception type: {type(e).__name__}")
+            import traceback
+            traceback.print_exc()
+            raise Exception(f"Could not delete project: {str(e)}")
     
     def get_evaluation_dates(self, project_id):
         """Get unique evaluation dates for a project, ordered by date descending"""
@@ -280,16 +309,20 @@ class ProjectService:
         try:
             evaluation_id = value_data.get('evaluationId')
             values = value_data.get('values', [])
+            
             evaluation = Evaluation.query.filter_by(id=evaluation_id, project_id=project_id).first()
             if not evaluation:
                 raise Exception("Evaluation non trovato.")
+            
             evaluation.close = True
+            
             for v in values:
                 skill_id = int(v['skill']) if isinstance(v['skill'], str) else v['skill']
                 skill = Skill.query.filter_by(id=skill_id).first()
                 if skill:
                     value = Values(skill_id=skill.id, evaluation_id=evaluation.id, value=v['value'])
                     db.session.add(value)
+            
             db.session.commit()
             return evaluation.to_dict()
         except Exception as e:

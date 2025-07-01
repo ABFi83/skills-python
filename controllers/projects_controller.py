@@ -93,3 +93,12 @@ def save_value(project_id):
         return jsonify(evaluation)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+@projects_bp.route('/projects/<int:project_id>', methods=['DELETE'])
+@jwt_required()
+def delete_project(project_id):
+    try:
+        response = project_service.delete_project(project_id)
+        return jsonify(response)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
